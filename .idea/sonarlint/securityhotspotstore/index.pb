@@ -5,3 +5,5 @@ P
  contracts/deman-forecasting.clar,9/9/9964b445bab21c683129200acd969e550f4facce
 T
 $contracts/facility-verification.clar,8/4/846317c1e114e49185758a0163ab152909b6c720
+M
+contracts/usage-tracKING.clar,1/2/1255163c9a1bbde34fb1a9c08d4ce3683c1dc301
