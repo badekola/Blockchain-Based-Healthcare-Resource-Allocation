@@ -1,30 +1,77 @@
+;; Usage Tracking Contract
+;; Monitors consumption of resources by healthcare facilities
 
-;; title: usage-tracKING
-;; version:
-;; summary:
-;; description:
+(define-data-var admin principal tx-sender)
 
-;; traits
-;;
+;; Data structure for usage records
+(define-map usage-records
+  { usage-id: uint }
+  {
+    facility-principal: principal,
+    resource-id: uint,
+    quantity-used: uint,
+    allocation-id: (optional uint),
+    usage-date: uint,
+    recorded-at: uint,
+    notes: (string-utf8 200)
+  }
+)
 
-;; token definitions
-;;
+;; Counter for usage record IDs
+(define-data-var next-usage-id uint u1)
 
-;; constants
-;;
+;; Record resource usage
+(define-public (record-usage
+    (facility-principal principal)
+    (resource-id uint)
+    (quantity-used uint)
+    (allocation-id (optional uint))
+    (usage-date uint)
+    (notes (string-utf8 200)))
+  (let ((usage-id (var-get next-usage-id)))
+    (begin
+      ;; Only the facility itself or admin can record usage
+      (asserts! (or (is-eq tx-sender facility-principal) (is-eq tx-sender (var-get admin))) (err u403))
 
-;; data vars
-;;
+      (map-set usage-records
+        { usage-id: usage-id }
+        {
+          facility-principal: facility-principal,
+          resource-id: resource-id,
+          quantity-used: quantity-used,
+          allocation-id: allocation-id,
+          usage-date: usage-date,
+          recorded-at: block-height,
+          notes: notes
+        }
+      )
+      (var-set next-usage-id (+ usage-id u1))
+      (ok usage-id)
+    )
+  )
+)
 
-;; data maps
-;;
+;; Get usage record details
+(define-read-only (get-usage-details (usage-id uint))
+  (map-get? usage-records { usage-id: usage-id })
+)
 
-;; public functions
-;;
+;; Calculate total usage of a resource by a facility
+(define-read-only (calculate-total-usage
+    (facility-principal principal)
+    (resource-id uint)
+    (start-date uint)
+    (end-date uint))
+  ;; Note: In a real implementation, this would iterate through all usage records
+  ;; Since Clarity doesn't support loops, this is a simplified placeholder
+  ;; In practice, you would need to implement this off-chain or use a different approach
+  u0
+)
 
-;; read only functions
-;;
-
-;; private functions
-;;
-
+;; Function to transfer admin rights
+(define-public (transfer-admin (new-admin principal))
+  (begin
+    (asserts! (is-eq tx-sender (var-get admin)) (err u403))
+    (ok (var-set admin new-admin))
+  )
+)
