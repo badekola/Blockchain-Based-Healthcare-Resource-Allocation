@@ -1,30 +1,90 @@
+;; Facility Verification Contract
+;; Validates healthcare providers and their credentials
 
-;; title: facility-verification
-;; version:
-;; summary:
-;; description:
+(define-data-var admin principal tx-sender)
 
-;; traits
-;;
+;; Data map to store verified facilities
+(define-map verified-facilities
+  principal
+  {
+    name: (string-utf8 100),
+    license-number: (string-utf8 50),
+    facility-type: (string-utf8 50),
+    verification-date: uint,
+    is-active: bool
+  }
+)
 
-;; token definitions
-;;
+;; Public function to register a new healthcare facility
+;; Can only be called by the admin
+(define-public (register-facility
+    (facility-principal principal)
+    (name (string-utf8 100))
+    (license-number (string-utf8 50))
+    (facility-type (string-utf8 50)))
+  (begin
+    (asserts! (is-eq tx-sender (var-get admin)) (err u403))
+    (asserts! (is-none (map-get? verified-facilities facility-principal)) (err u100))
+    (ok (map-set verified-facilities
+      facility-principal
+      {
+        name: name,
+        license-number: license-number,
+        facility-type: facility-type,
+        verification-date: block-height,
+        is-active: true
+      }
+    ))
+  )
+)
 
-;; constants
-;;
+;; Public function to deactivate a facility
+(define-public (deactivate-facility (facility-principal principal))
+  (begin
+    (asserts! (is-eq tx-sender (var-get admin)) (err u403))
+    (asserts! (is-some (map-get? verified-facilities facility-principal)) (err u404))
+    (match (map-get? verified-facilities facility-principal)
+      facility-data (ok (map-set verified-facilities
+        facility-principal
+        (merge facility-data { is-active: false })
+      ))
+      (err u404)
+    )
+  )
+)
 
-;; data vars
-;;
+;; Public function to reactivate a facility
+(define-public (reactivate-facility (facility-principal principal))
+  (begin
+    (asserts! (is-eq tx-sender (var-get admin)) (err u403))
+    (asserts! (is-some (map-get? verified-facilities facility-principal)) (err u404))
+    (match (map-get? verified-facilities facility-principal)
+      facility-data (ok (map-set verified-facilities
+        facility-principal
+        (merge facility-data { is-active: true })
+      ))
+      (err u404)
+    )
+  )
+)
 
-;; data maps
-;;
+;; Read-only function to check if a facility is verified
+(define-read-only (is-verified (facility-principal principal))
+  (match (map-get? verified-facilities facility-principal)
+    facility-data (is-eq (get is-active facility-data) true)
+    false
+  )
+)
 
-;; public functions
-;;
+;; Read-only function to get facility details
+(define-read-only (get-facility-details (facility-principal principal))
+  (map-get? verified-facilities facility-principal)
+)
 
-;; read only functions
-;;
-
-;; private functions
-;;
-
+;; Function to transfer admin rights
+(define-public (transfer-admin (new-admin principal))
+  (begin
+    (asserts! (is-eq tx-sender (var-get admin)) (err u403))
+    (ok (var-set admin new-admin))
+  )
+)
